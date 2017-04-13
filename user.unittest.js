@@ -171,104 +171,103 @@ describe("unit.memouser", function() {
         });
 
     });
+
+    describe("signout", function() {
+        beforeEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {
+                return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function() { done(); })
+            .catch(done); 
+        });
+
+        afterEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {done();})
+            .catch(done); 
+        });
+
+        it("must get an error when signout without user", function(done) {
+            memouser.signout()
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_PARAMS);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error when signout a non existent user", function(done) {
+            memouser.signout("test333@test.com")
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.NOTFOUND);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must change the user status to STATUS.OUT", function(done) {
+            memouser.signout("test@test.com")
+            .then(function(userBadge) {
+                expect(userBadge).to.be.ok;
+                expect(userBadge.id).to.be.equal("test@test.com");
+                expect(userBadge.status).to.be.equal(MemoUser.STATUS.OUT);
+                done();
+            })
+            .catch(done);
+        });
+    });
+
 /*
-        var email1 = "rodrigobuas+unittest@gmail.com";
-        var email2 = "rodrigobuas+unittest2@gmail.com";
-        var email3 = "rodrigobuas+unittest3@gmail.com";
-        var email4 = "rodrigobuas+unittest4@gmail.com";
-        var password = "123456";
-        it("type-name", function(done) {
-            var user = {
-                email: email1, 
-                password: password ,
-                name : 555
-            };
-            User.Create(user, function(err, savedUser) {
-                expect(err).to.be.null;
-                expect(savedUser).to.not.be.null;
-                expect(savedUser.status).to.equal(User.STATUS.CONFIRM);
-                done();
-            });
+describe("signout", function() {
+        beforeEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {
+                return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function() { done(); })
+            .catch(done); 
         });
-        it("type-genre-ko", function(done) {
-            var user = {
-                email: email1, 
-                password: password,
-                gender : "HHH"
-            };
-            User.Create(user, function(err, savedUser) {
-                expect(err).to.not.be.null;
-                done();
-            });
+
+        afterEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {done();})
+            .catch(done); 
         });
-        it("type-genre-ok", function(done) {
-            var user = {
-                email: email1, 
-                password: password,
-                gender : User.GENDER.F
-            };
-            User.Create(user, function(err, savedUser) {
-                expect(err).to.be.null;
+
+        it("must ", function(done) {
+            memouser.signup(null)
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_ID);
                 done();
-            });
+            })
+            .catch(done);
         });
-        it("type-profile-ko", function(done) {
-            var user = {
-                email: email1, 
-                password: password,
-                profile : "HHH"
-            };
-            User.Create(user, function(err, savedUser) {
-                expect(err).to.not.be.null;
+
+        it("must ", function(done) {
+            memouser.signup({email:"test@test.com",password:"123456"})
+            .then(function(userBadge) {
+                expect(userBadge).to.be.ok;
+                expect(userBadge.id).to.be.equal("test@test.com");
+                expect(userBadge.password).to.be.not.equal("123456");
+                expect(userBadge.status).to.be.equal(MemoUser.STATUS.CONFIRM);
                 done();
-            });
-        });
-        it("type-profile-ok", function(done) {
-            var user = {
-                email: email1, 
-                password: password,
-                profile : User.PROFILE.ADMIN
-            };
-            User.Create(user, function(err, savedUser) {
-                expect(err).to.be.null;
-                done();
-            });
+            })
+            .catch(done);
         });
     });
-
-    describe("createanonymous", function() {
-        after(function(done) {
-            User.Purge(0, User.STATUS.ANONYMOUS, done);
-        });
-
-        it("success", function(done) {
-            User.CreateAnonymous(function(err, savedUser) {
-                expect(err).to.be.null;
-                expect(savedUser).to.not.be.null;
-                expect(savedUser.status).to.equal(User.STATUS.ANONYMOUS);
-                done();
-            });
-        });
-        it("multiple", function(done) {
-            User.CreateAnonymous(function(err, savedUser) {
-                expect(err).to.be.null;
-                expect(savedUser).to.not.be.null;
-                expect(savedUser.status).to.equal(User.STATUS.ANONYMOUS);
-                User.CreateAnonymous(function(err2, savedUser2) {
-                    expect(err2).to.be.null;
-                    expect(savedUser2).to.not.be.null;
-                    expect(savedUser2.status).to.equal(User.STATUS.ANONYMOUS);
-                    User.CreateAnonymous(function(err3, savedUser3) {
-                        expect(err3).to.be.null;
-                        expect(savedUser3).to.not.be.null;
-                        expect(savedUser3.status).to.equal(User.STATUS.ANONYMOUS);
-                        done();
-                    });
-                });
-            });
-        });
-    });
-
     describe("purge", function() {
         var dateMinus0 = moment();
         var dateMinus10 = moment().subtract(10, "days");
