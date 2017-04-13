@@ -33,17 +33,16 @@ MemoUserDB.ERROR = Object.assign({}, MemoDB.ERROR, {
     PROFILE_VALUE : "Non valid value of enun PROFILE",
     ENCRYPT : "Error during encryption",
     WRONG_PASSWORD : "The password not match with registered password",
+    NOTLOGGED : "User not logged",
+    TOKEN : "User token doesn't match",
 
     USER_PARAMS : "Missing required params",
     USER_DATA : "Missing user data",
-    USER_NOTFOUND : "Cant find the user",
     USER_UNKNOW : "Unknow user",
-    USER_NOTLOGGED : "User not logged",
     USER_NOTAUTHORIZED : "User not authorized",
     USER_CONFIRMATION : "Waiting confirmation",
     USER_BLOCKED : "User blocked",
-    USER_REMOVED : "User removed",
-    USER_TOKEN : "User token doesn't match"
+    USER_REMOVED : "User removed"
 });
 
 MemoUserDB.STATUS = {
@@ -135,31 +134,57 @@ MemoUserDB.prototype.signout = function(id, password) {
     });
 }
 
-MemoUserDB.prototype.revive = function() {
+MemoUserDB.prototype.login = function(id, password) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.verifyPassport(id, password)
+        .then(function(verifiedUser) {
+            if(!verifiedUser || verifiedUser.status != MemoUserDB.STATUS.OFF) return reject({error:MemoUserDB.ERROR.NOTLOGGED, status:verifiedUser && verifiedUser.status});
+
+            verifiedUser.status = MemoUserDB.STATUS.ON;
+            return self.update(verifiedUser);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
-MemoUserDB.prototype.login = function() {
+MemoUserDB.prototype.logout = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.get(id)
+        .then(function(user) {
+            if(!user || user.status != MemoUserDB.STATUS.ON) return reject({error:MemoUserDB.ERROR.NOTLOGGED, status:user && user.status});
+
+            user.status = MemoUserDB.STATUS.OFF;
+            return self.update(user);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
-MemoUserDB.prototype.logout = function() {
+MemoUserDB.prototype.confirm = function(id, token) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.verifyPassport(id, password)
+        .then(function(verifiedUser) {
+            if(!verifiedUser || verifiedUser.status != MemoUserDB.STATUS.CONFIRM) return reject({error:MemoUserDB.ERROR.NOTLOGGED, status:verifiedUser && verifiedUser.status});
+
+            if(!verifiedUser || verifiedUser.token != token) return reject({error:MemoUserDB.ERROR.TOKEN});
+
+            verifiedUser.status = MemoUserDB.STATUS.OFF;
+            return self.update(verifiedUser);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
-MemoUserDB.prototype.confirm = function() {
+MemoUserDB.prototype.revive = function(id, password) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        //TODO get an user and send a mail with token
     });
 }
 
