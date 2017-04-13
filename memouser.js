@@ -224,10 +224,15 @@ MemoUserDB.prototype.verifyPassport = function(id, password) {
     });
 }
 
-MemoUserDB.prototype.badget = function() {
+MemoUserDB.prototype.badget = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.get(id)
+        .then(function(user) {
+            return pickUserBadge(self, user);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
