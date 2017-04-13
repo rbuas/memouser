@@ -31,6 +31,7 @@ MemoUserDB.ERROR = {
     STATUS_VALUE : "Non valid value of enun STATUS",
     GENDER_VALUE : "Non valid value of enun GENDER",
     PROFILE_VALUE : "Non valid value of enun PROFILE",
+    ENCRYPT : "Error during encryption",
 
     USER_WRONG_PASSWORD : "The password not match with registered password",
     USER_PARAMS : "Missing required params",
@@ -108,8 +109,12 @@ MemoUserDB.prototype.signup = function(user) {
         user.status = MemoUserDB.STATUS.CONFIRM;
         encryptPassword(self, user.password)
         .then(function(encryptedPassword) {
-            self.create(user).then(resolve).catch(reject);
+            if(!encryptedPassword) return reject({error:MemoUserDB.ERROR.ENCRYPT});
+
+            user.password = encryptedPassword;
+            return self.create(user);
         })
+        .then(resolve)
         .catch(reject);
     });
 }
