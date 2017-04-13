@@ -32,8 +32,8 @@ MemoUserDB.ERROR = Object.assign({}, MemoDB.ERROR, {
     GENDER_VALUE : "Non valid value of enun GENDER",
     PROFILE_VALUE : "Non valid value of enun PROFILE",
     ENCRYPT : "Error during encryption",
+    WRONG_PASSWORD : "The password not match with registered password",
 
-    USER_WRONG_PASSWORD : "The password not match with registered password",
     USER_PARAMS : "Missing required params",
     USER_DATA : "Missing user data",
     USER_NOTFOUND : "Cant find the user",
@@ -119,13 +119,16 @@ MemoUserDB.prototype.signup = function(user) {
     });
 }
 
-MemoUserDB.prototype.signout = function(id) {
+MemoUserDB.prototype.signout = function(id, password) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        self.get(id)
-        .then(function(user) {
-            user.status = MemoUserDB.STATUS.OUT;
-            return self.update(user);
+        if(!id) return reject({error:MemoUserDB.ERROR.MISSING_ID});
+        if(!password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD});
+
+        self.verifyPassport(id, password)
+        .then(function(verifiedUser) {
+            verifiedUser.status = MemoUserDB.STATUS.OUT;
+            return self.update(verifiedUser);
         })
         .then(resolve)
         .catch(reject);
@@ -182,10 +185,17 @@ MemoUserDB.prototype.remPassport = function() {
 
 }
 
-MemoUserDB.prototype.verifyPassport = function() {
+MemoUserDB.prototype.verifyPassport = function(id, password) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.get(id)
+        .then(function(user) {
+            if(!user || !user.password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD});
+
+            return verifyPassword(self, user, password);
+        })
+        .then(resolve)
+        .catch(reject)
     });
 }
 
@@ -216,6 +226,18 @@ function encryptPassword (self, password) {
                 resolve(hash);
             });
         });
+    });
+}
+
+function verifyPassword (self, user, password) {
+    return new Promise(function (resolve, reject) {
+        encryptPassword(self, password)
+        .then(function(encryptedPassword) {
+            if(!encryptedPassword || encryptedPassword != user.password) return reject({error:MemoUserDB.ERROR.WRONG_PASSWORD});
+
+            resolve(user);
+        })
+        .catch(reject);
     });
 }
 

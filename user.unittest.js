@@ -195,14 +195,27 @@ describe("unit.memouser", function() {
             })
             .catch(function(err) {
                 expect(err).to.be.ok;
-                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_PARAMS);
+                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_ID);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error when signout without pass the password parameter", function(done) {
+            memouser.signout("test333@test.com")
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_PASSWORD);
                 done();
             })
             .catch(done);
         });
 
         it("must get an error when signout a non existent user", function(done) {
-            memouser.signout("test333@test.com")
+            memouser.signout("test333@test.com", "123")
             .then(function(newUser) {
                 done(new Error("should not pass here, because the operation have to fail"));
             })
@@ -214,8 +227,21 @@ describe("unit.memouser", function() {
             .catch(done);
         });
 
-        it("must change the user status to STATUS.OUT", function(done) {
-            memouser.signout("test@test.com")
+        it("must get an error when signout with a wrong password", function(done) {
+            memouser.signout("test@test.com", "123")
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.WRONG_PASSWORD);
+                done();
+            })
+            .catch(done);
+        });
+
+        it.only("must change the user status to STATUS.OUT", function(done) {
+            memouser.signout("test@test.com", "123456")
             .then(function(userBadge) {
                 expect(userBadge).to.be.ok;
                 expect(userBadge.id).to.be.equal("test@test.com");
