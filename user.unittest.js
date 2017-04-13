@@ -240,7 +240,7 @@ describe("unit.memouser", function() {
             .catch(done);
         });
 
-        it.only("must change the user status to STATUS.OUT", function(done) {
+        it("must change the user status to STATUS.OUT", function(done) {
             memouser.signout("test@test.com", "123456")
             .then(function(userBadge) {
                 expect(userBadge).to.be.ok;

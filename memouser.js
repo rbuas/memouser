@@ -229,15 +229,13 @@ function encryptPassword (self, password) {
     });
 }
 
-function verifyPassword (self, user, password) {
+function verifyPassword (self, user, candidate) {
     return new Promise(function (resolve, reject) {
-        encryptPassword(self, password)
-        .then(function(encryptedPassword) {
-            if(!encryptedPassword || encryptedPassword != user.password) return reject({error:MemoUserDB.ERROR.WRONG_PASSWORD});
+        bcrypt.compare(candidate, user.password, function(err, isMatch) {
+            if(!isMatch) return reject({error:MemoUserDB.ERROR.WRONG_PASSWORD});
 
             resolve(user);
-        })
-        .catch(reject);
+        });
     });
 }
 
