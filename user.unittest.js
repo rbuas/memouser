@@ -111,6 +111,26 @@ describe("unit.memouser", function() {
             .catch(done);
         });
 
+        it("must get an error when singup a duplicate", function(done) {
+            memouser.signup({email:"test@test.com",password:"123456"})
+            .then(function(userBadge) {
+                expect(userBadge).to.be.ok;
+                expect(userBadge.id).to.be.equal("test@test.com");
+                expect(userBadge.password).to.be.not.equal("123456");
+                expect(userBadge.status).to.be.equal(MemoUser.STATUS.CONFIRM);
+                return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function(duplicateUserBadge) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.DUPLICATE);
+                done();
+            })
+            .catch(done);
+        });
+
     });
 /*
         var email1 = "rodrigobuas+unittest@gmail.com";

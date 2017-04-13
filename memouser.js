@@ -24,7 +24,7 @@ function MemoUserDB (options) {
     MemoDB.call(self, self.options);
 }
 
-MemoUserDB.ERROR = {
+MemoUserDB.ERROR = Object.assign({}, MemoDB.ERROR, {
     MISSING_ID : "Missing user identification (email)",
     MISSING_PASSWORD : "Missing user password",
     EMAIL : "The email and id of an user is not the same",
@@ -44,7 +44,7 @@ MemoUserDB.ERROR = {
     USER_BLOCKED : "User blocked",
     USER_REMOVED : "User removed",
     USER_TOKEN : "User token doesn't match"
-};
+});
 
 MemoUserDB.STATUS = {
     ON : "N",
