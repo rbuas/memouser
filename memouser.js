@@ -119,10 +119,16 @@ MemoUserDB.prototype.signup = function(user) {
     });
 }
 
-MemoUserDB.prototype.signout = function() {
+MemoUserDB.prototype.signout = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.get(id)
+        .then(function(user) {
+            user.status = MemoUserDB.STATUS.OUT;
+            return self.update(user);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
