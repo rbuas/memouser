@@ -131,6 +131,45 @@ describe("unit.memouser", function() {
             .catch(done);
         });
 
+        it("must get an error when singup with wrong genre type", function(done) {
+            memouser.signup({email:"test@test.com",password:"123456",gender:"qsdqsdqs"})
+            .then(function(userBadge) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.GENDER_VALUE);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error when singup with wrong status type", function(done) {
+            memouser.signup({email:"test@test.com",password:"123456",status:"qsdqdqsdqs"})
+            .then(function(userBadge) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.STATUS_VALUE);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error when singup with wrong profile type", function(done) {
+            memouser.signup({email:"test@test.com",password:"123456",profile:"qsdqdqsdqs"})
+            .then(function(userBadge) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.PROFILE_VALUE);
+                done();
+            })
+            .catch(done);
+        });
+
     });
 /*
         var email1 = "rodrigobuas+unittest@gmail.com";
@@ -138,19 +177,6 @@ describe("unit.memouser", function() {
         var email3 = "rodrigobuas+unittest3@gmail.com";
         var email4 = "rodrigobuas+unittest4@gmail.com";
         var password = "123456";
-        it("duplicate", function(done) {
-            var user = {email: email1, password: password};
-            User.Create(user, function(err, savedUser) {
-                expect(err).to.be.null;
-                expect(savedUser).to.not.be.null;
-                expect(savedUser.status).to.equal(User.STATUS.CONFIRM);
-                User.Create(user, function(err2, savedUser2) {
-                    expect(err2).to.not.be.null;
-                    expect(err2.code).to.equal(11000);
-                    done();
-                });
-            });
-        });
         it("type-name", function(done) {
             var user = {
                 email: email1, 
