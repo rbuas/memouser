@@ -7,22 +7,30 @@ var crypto = require("crypto");
 var jsext = require("jsext");
 var MemoDB = require("memodb");
 
-//var WebPigeon = require("webpigeon");
-
 MemoUserDB.extends( MemoDB );
 function MemoUserDB (options) {
     var self = this;
-    self.options = Object.assign({
-        type : "user",
-        schema : self.SCHEMA,
-        schemadefault : self.SCHEMADEFAULT,
-        badgekeys : self.BADGEKEYS,
-        hashsize : 16,
-        encryptsalt : 10,
-    }, self.DEFAULTOPTIONS, options);
-    //self.pigeon = self.options.pigeon || new WebPigeon();
+    self.options = Object.assign(MemoUserDB.DEFAULTOPTIONS, MemoDB.DEFAULTOPTIONS, options);
     MemoDB.call(self, self.options);
 }
+
+MemoUserDB.DEFAULTOPTIONS = {
+    type : "user",
+    schema : self.SCHEMA,
+    schemadefault : self.SCHEMADEFAULT,
+    badgekeys : self.BADGEKEYS,
+    hashsize : 16,
+    encryptsalt : 10,
+    message : function(userbadge, message) {
+        console.log("MEMOUSER::MESSAGE: " , message, userbadge);
+    }
+};
+
+MemoUserDB.MESSAGE = {
+    CONFIRM : "CONFIRM",
+    REVIVE : "REVIVE",
+    RESETPASSWORD : "RESETPASSWORD"
+};
 
 MemoUserDB.ERROR = Object.assign({}, MemoDB.ERROR, {
     MISSING_ID : "Missing user identification (email)",
@@ -35,6 +43,7 @@ MemoUserDB.ERROR = Object.assign({}, MemoDB.ERROR, {
     WRONG_PASSWORD : "The password not match with registered password",
     NOTLOGGED : "User not logged",
     TOKEN : "User token doesn't match",
+    STATUS : "Not an allowed state to process this operation",
 
     USER_PARAMS : "Missing required params",
     USER_DATA : "Missing user data",
@@ -50,6 +59,7 @@ MemoUserDB.STATUS = {
     OFF : "F",
     OUT : "T",
     CONFIRM : "C",
+    REVIVE : "R",
     BLOCK : "B"
 };
 
@@ -94,6 +104,45 @@ MemoUserDB.prototype.SCHEMADEFAULT = function() {
     };
 }
 
+MemoUserDB.prototype.verifyPassport = function(id, password) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            if(!user || !user.password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD});
+
+            return verifyPassword(self, user, password);
+        })
+        .then(resolve)
+        .catch(reject)
+    });
+}
+
+MemoUserDB.prototype.message = function(id, message) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            var userbadget = sendMessage(self, user, message);
+            return {user:userbadget, message:message};
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+}
+
+MemoUserDB.prototype.badget = function(id) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            return pickUserBadge(self, user);
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+}
+
 MemoUserDB.prototype.signup = function(user) {
     var self = this;
     return new Promise(function(resolve, reject) {
@@ -113,20 +162,23 @@ MemoUserDB.prototype.signup = function(user) {
             user.password = encryptedPassword;
             return self.create(user);
         })
+        .then(function(newuser) {
+            sendMessage(self, newuser, MemoUserDB.MESSAGE.CONFIRM);
+            return newuser;
+        })
         .then(resolve)
         .catch(reject);
     });
 }
 
-MemoUserDB.prototype.signout = function(id, password) {
+MemoUserDB.prototype.signout = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
         if(!id) return reject({error:MemoUserDB.ERROR.MISSING_ID});
-        if(!password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD});
 
-        self.verifyPassport(id, password)
-        .then(function(verifiedUser) {
-            verifiedUser.status = MemoUserDB.STATUS.OUT;
+        self.get(id)
+        .then(function(user) {
+            user.status = MemoUserDB.STATUS.OUT;
             return self.update(verifiedUser);
         })
         .then(resolve)
@@ -167,11 +219,14 @@ MemoUserDB.prototype.logout = function(id) {
 MemoUserDB.prototype.confirm = function(id, token) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        self.verifyPassport(id, password)
-        .then(function(verifiedUser) {
-            if(!verifiedUser || verifiedUser.status != MemoUserDB.STATUS.CONFIRM) return reject({error:MemoUserDB.ERROR.NOTLOGGED, status:verifiedUser && verifiedUser.status});
+        self.get(id)
+        .then(function(user) {
+            if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
 
-            if(!verifiedUser || verifiedUser.token != token) return reject({error:MemoUserDB.ERROR.TOKEN});
+            var stateToConfirm = [MemoUserDB.STATUS.CONFIRM, MemoUserDB.STATUS.REVIVE];
+            if(stateToConfirm.indexOf(user.status) < 0) return reject({error:MemoUserDB.ERROR.STATUS, status:user.status});
+
+            if(user.token != token) return reject({error:MemoUserDB.ERROR.TOKEN});
 
             verifiedUser.status = MemoUserDB.STATUS.OFF;
             return self.update(verifiedUser);
@@ -181,58 +236,126 @@ MemoUserDB.prototype.confirm = function(id, token) {
     });
 }
 
-MemoUserDB.prototype.revive = function(id, password) {
+MemoUserDB.prototype.update = function(user) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        //TODO get an user and send a mail with token
+        if(user.password) {
+            user.password = null;
+            delete user.password;
+        }
+        if(user.newpassword) {
+            encryptPassword(self, user.newpassword)
+            .then(function(encryptedPassword) {
+                if(!encryptedPassword) return reject({error:MemoUserDB.ERROR.ENCRYPT});
+
+                user.password = encryptedPassword;
+                return MemoDB.prototype.update.call(self, user);
+            })
+            .then(resolve)
+            .catch(reject);
+        }
     });
 }
 
-MemoUserDB.prototype.resetPassword = function() {
-    var self = this;
-    return new Promise(function(resolve, reject) {
-        //TODO
-    });
-}
-
-MemoUserDB.prototype.addPassport = function() {
-    var self = this;
-    return new Promise(function(resolve, reject) {
-        //TODO
-    });
-}
-
-MemoUserDB.prototype.remPassport = function() {
-    var self = this;
-    return new Promise(function(resolve, reject) {
-        //TODO
-    });
-
-}
-
-MemoUserDB.prototype.verifyPassport = function(id, password) {
+MemoUserDB.prototype.revive = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
         self.get(id)
         .then(function(user) {
-            if(!user || !user.password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD});
+            if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
 
-            return verifyPassword(self, user, password);
-        })
-        .then(resolve)
-        .catch(reject)
-    });
-}
+            if(user.status != MemoUserDB.STATE.OUT) return reject({error:MemoUserDB.ERROR.STATUS, status:user.status});
 
-MemoUserDB.prototype.badget = function(id) {
-    var self = this;
-    return new Promise(function(resolve, reject) {
-        self.get(id)
-        .then(function(user) {
-            return pickUserBadge(self, user);
+            user.status = MemoUserDB.STATUS.CONFIRM;
+
+            sendMessage(self, user, MemoUserDB.MESSAGE.REVIVE);
+
+            return self.update(user);
         })
         .then(resolve)
         .catch(reject);
+    });
+}
+
+MemoUserDB.prototype.addPassport = function(id, path) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
+
+            if(!user.passport) user.passport = [];
+            user.passport.push(path);
+
+            return self.update(user);
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+}
+
+MemoUserDB.prototype.remPassport = function(id, path) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
+
+            if(!user.passport) user.passport = [];
+            
+            user.passport.removeValue(path);
+
+            return self.update(user);
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+}
+
+MemoUserDB.prototype.resetPassword = function(id) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
+
+            if(user.state != MemoUserDB.ERROR.CONFIRM) {
+                user.token = buildToken(self.options.hashsize);
+                return self.update(user);
+            }
+
+            return user;
+        })
+        .then(function(user) {
+            var userbadget = sendMessage(self, user, MemoUserDB.MESSAGE.RESETPASSWORD);
+            return {user:userbadget, message:MemoUserDB.MESSAGE.RESETPASSWORD};
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+}
+
+MemoUserDB.prototype.newPassword = function(id, newpassword) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        self.get(id)
+        .then(function(user) {
+            if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
+
+            if(user.token != token) return reject({error:MemoUserDB.ERROR.TOKEN});
+
+            user.newpassword = newpassword;
+            return self.update(user);
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+}
+
+MemoUserDB.prototype.purge = function(days) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        //TODO
     });
 }
 
@@ -294,4 +417,13 @@ function assertUser (user, isNewUser) {
     if(user.status && !verifyEnun(user.status, MemoUserDB.STATUS)) return MemoUserDB.ERROR.STATUS_VALUE;
     if(user.gender && !verifyEnun(user.gender, MemoUserDB.GENDER)) return MemoUserDB.ERROR.GENDER_VALUE;
     if(user.profile && !verifyEnun(user.profile, MemoUserDB.PROFILE)) return MemoUserDB.ERROR.PROFILE_VALUE;
+}
+
+function sendMessage (self, user, message) {
+    var messageAction = self.options.message;
+    if(!message) return;
+
+    var userbadget = pickUserBadge(self, user);
+    message(userbadget, message);
+    return userbadget;
 }

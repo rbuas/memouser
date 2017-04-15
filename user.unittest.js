@@ -253,7 +253,7 @@ describe("unit.memouser", function() {
     });
 
 /*
-describe("signout", function() {
+    describe("signout", function() {
         beforeEach(function(done) { 
             memouser.removeAll()
             .then(function() {
