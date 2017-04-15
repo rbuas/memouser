@@ -84,6 +84,7 @@ MemoUserDB.prototype.SCHEMA = {
     birthday : Date,
     since : Date,
     status : String,
+    lastlogin : Date,
     gender : String,
     profile : String,
     lang : String,
@@ -97,7 +98,8 @@ MemoUserDB.prototype.SCHEMADEFAULT = function() {
     var self = this;
     return {
         token : buildToken(self.options.hashsize),
-        since : Date.now(),
+        since : moment(),
+        lastlogin : moment(),
         passport : [],
         favorite : [],
         status : MemoUserDB.STATUS.CONFIRM
@@ -194,6 +196,7 @@ MemoUserDB.prototype.login = function(id, password) {
             if(!verifiedUser || verifiedUser.status != MemoUserDB.STATUS.OFF) return reject({error:MemoUserDB.ERROR.NOTLOGGED, status:verifiedUser && verifiedUser.status});
 
             verifiedUser.status = MemoUserDB.STATUS.ON;
+            verifiedUser.lastlogin = moment();
             return self.update(verifiedUser);
         })
         .then(resolve)
