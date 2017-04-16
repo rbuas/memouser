@@ -28,6 +28,8 @@ MemoUserDB.DEFAULTOPTIONS = {
 
 MemoUserDB.MESSAGE = {
     CONFIRM : "CONFIRM",
+    CONFIRM_FINISHING : "CONFIRM_FINISHING",
+    CONFIRM_PURGED : "CONFIRM_PURGED",
     REVIVE : "REVIVE",
     RESETPASSWORD : "RESETPASSWORD"
 };
@@ -322,12 +324,10 @@ MemoUserDB.prototype.resetPassword = function(id) {
         .then(function(user) {
             if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
 
-            if(user.state != MemoUserDB.ERROR.CONFIRM) {
-                user.token = buildToken(self.options.hashsize);
-                return self.update(user);
-            }
+            if(user.state == MemoUserDB.ERROR.CONFIRM) return reject({error:MemoUserDB.ERROR.CONFIRM});
 
-            return user;
+            user.token = buildToken(self.options.hashsize);
+            return self.update(user);
         })
         .then(function(user) {
             var userbadget = sendMessage(self, user, MemoUserDB.MESSAGE.RESETPASSWORD);
@@ -357,8 +357,35 @@ MemoUserDB.prototype.newPassword = function(id, newpassword) {
 
 MemoUserDB.prototype.purge = function(days) {
     var self = this;
+    var targetSince = moment().subtract(days, "days");
     return new Promise(function(resolve, reject) {
-        //TODO
+        self.find({status:MemoUserDB.STATUS.CONFIRM})
+        .then(function(list) {
+            return list.reduce(function(resp, user) {
+                user = pickUserBadge(self, user);
+                if(user.since < targetSince) {
+                    resp.purge.push(user);
+                } else {
+                    resp.warning.push(user);
+                }
+            }, {purge:[], warning:[]});
+        })
+        .then(function(groups) {
+            if(!groups) return;
+
+            var tasks = groups.purge.map(function(user) {
+                sendMessage(self, user, MemoUserDB.MESSAGE.CONFIRM_PURGED);
+                return self.remove(user.id);
+            });
+
+            groups.warning.forEach(function(user) {
+                sendMessage(self, user, MemoUserDB.MESSAGE.CONFIRM_FINISHING);
+            });
+
+            return Promise.all(tasks);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
