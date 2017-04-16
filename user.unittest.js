@@ -10,7 +10,7 @@ describe("unit.memouser", function() {
 
     before(function(done) {
         mcache = new MemoCache({maxSize:5000});
-        memouser = new MemoUser({mcache:mcache, memopath:"./test/memouser"});
+        memouser = new MemoUser({mcache:mcache, memopath:"./test/memouser", message:false});
         done();
     });
 
@@ -173,10 +173,16 @@ describe("unit.memouser", function() {
     });
 
     describe("signout", function() {
+        var testtoken;
+
         beforeEach(function(done) { 
             memouser.removeAll()
             .then(function() {
                 return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function(newuser) {
+                testtoken = newuser.token;
+                return newuser;
             })
             .then(function() { done(); })
             .catch(done); 
@@ -201,21 +207,8 @@ describe("unit.memouser", function() {
             .catch(done);
         });
 
-        it("must get an error when signout without pass the password parameter", function(done) {
-            memouser.signout("test333@test.com")
-            .then(function(newUser) {
-                done(new Error("should not pass here, because the operation have to fail"));
-            })
-            .catch(function(err) {
-                expect(err).to.be.ok;
-                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_PASSWORD);
-                done();
-            })
-            .catch(done);
-        });
-
         it("must get an error when signout a non existent user", function(done) {
-            memouser.signout("test333@test.com", "123")
+            memouser.signout("test333@test.com")
             .then(function(newUser) {
                 done(new Error("should not pass here, because the operation have to fail"));
             })
@@ -227,21 +220,14 @@ describe("unit.memouser", function() {
             .catch(done);
         });
 
-        it("must get an error when signout with a wrong password", function(done) {
-            memouser.signout("test@test.com", "123")
-            .then(function(newUser) {
-                done(new Error("should not pass here, because the operation have to fail"));
-            })
-            .catch(function(err) {
-                expect(err).to.be.ok;
-                expect(err.error).to.be.equal(MemoUser.ERROR.WRONG_PASSWORD);
-                done();
-            })
-            .catch(done);
-        });
-
         it("must change the user status to STATUS.OUT", function(done) {
-            memouser.signout("test@test.com", "123456")
+            memouser.confirm("test@test.com", testtoken)
+            .then(function(user) {
+                return memouser.login("test@test.com", "123456");
+            })
+            .then(function(userBadge) {
+                return memouser.signout("test@test.com");
+            })
             .then(function(userBadge) {
                 expect(userBadge).to.be.ok;
                 expect(userBadge.id).to.be.equal("test@test.com");
@@ -252,12 +238,17 @@ describe("unit.memouser", function() {
         });
     });
 
-/*
-    describe("signout", function() {
+    describe("restore", function() {
+        var testtoken;
+
         beforeEach(function(done) { 
             memouser.removeAll()
             .then(function() {
                 return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function(newuser) {
+                testtoken = newuser.token;
+                return newuser;
             })
             .then(function() { done(); })
             .catch(done); 
@@ -269,31 +260,158 @@ describe("unit.memouser", function() {
             .catch(done); 
         });
 
-        it("must ", function(done) {
-            memouser.signup(null)
+        it("must get an error with a wrong state operation", function(done) {
+            memouser.restore("test@test.com")
             .then(function(newUser) {
                 done(new Error("should not pass here, because the operation have to fail"));
             })
             .catch(function(err) {
                 expect(err).to.be.ok;
-                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_ID);
+                expect(err.error).to.be.equal(MemoUser.ERROR.STATUS);
                 done();
             })
             .catch(done);
         });
 
-        it("must ", function(done) {
-            memouser.signup({email:"test@test.com",password:"123456"})
+        it("must restore user and change the user status to STATUS.CONFIRM", function(done) {
+            memouser.confirm("test@test.com", testtoken)
             .then(function(userBadge) {
-                expect(userBadge).to.be.ok;
-                expect(userBadge.id).to.be.equal("test@test.com");
-                expect(userBadge.password).to.be.not.equal("123456");
-                expect(userBadge.status).to.be.equal(MemoUser.STATUS.CONFIRM);
+                return memouser.signout("test@test.com");
+            })
+            .then(function(userBadge) {
+                return memouser.restore("test@test.com");
+            })
+            .then(function(restoredUser) {
+                expect(restoredUser).to.be.ok;
+                expect(restoredUser.id).to.be.equal("test@test.com");
+                expect(restoredUser.status).to.be.equal(MemoUser.STATUS.CONFIRM);
                 done();
             })
             .catch(done);
         });
     });
+
+    describe("confirm", function() {
+        var testtoken;
+
+        beforeEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {
+                return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function(newuser) {
+                testtoken = newuser.token;
+                return newuser;
+            })
+            .then(function() { done(); })
+            .catch(done); 
+        });
+
+        afterEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {done();})
+            .catch(done); 
+        });
+
+        it("must get an error when confirm without token", function(done) {
+            memouser.confirm("test@test.com")
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.TOKEN);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error when confirm with a wrong token", function(done) {
+            memouser.confirm("test@test.com", "ttttt")
+            .then(function(newUser) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.TOKEN);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must to confirm an user and changes it's status to STATUS.OFF", function(done) {
+            memouser.confirm("test@test.com", testtoken)
+            .then(function(confirmedUser) {
+                expect(confirmedUser).to.be.ok;
+                expect(confirmedUser.id).to.be.equal("test@test.com");
+                expect(confirmedUser.status).to.be.equal(MemoUser.STATUS.OFF);
+                done();
+            })
+            .catch(done);
+        });
+    });
+
+    describe("login", function() {
+        var testtoken;
+
+        beforeEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {
+                return memouser.signup({email:"test@test.com",password:"123456"});
+            })
+            .then(function(newuser) {
+                testtoken = newuser.token;
+                return memouser.confirm("test@test.com", testtoken);
+            })
+            .then(function() { done(); })
+            .catch(done); 
+        });
+
+        afterEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {done();})
+            .catch(done); 
+        });
+
+        it("must get an error when login without a password", function(done) {
+            memouser.login("test@test.com")
+            .then(function(user) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.id).to.be.equal("test@test.com");
+                expect(err.error).to.be.equal(MemoUser.ERROR.MISSING_PASSWORD);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error when login with a wrong password", function(done) {
+            memouser.login("test@test.com", "123")
+            .then(function(user) {
+                done(new Error("should not pass here, because the operation have to fail"));
+            })
+            .catch(function(err) {
+                expect(err).to.be.ok;
+                expect(err.error).to.be.equal(MemoUser.ERROR.WRONG_PASSWORD);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must to login", function(done) {
+            memouser.login("test@test.com", "123456")
+            .then(function(userBadge) {
+                expect(userBadge).to.be.ok;
+                expect(userBadge.id).to.be.equal("test@test.com");
+                expect(userBadge.status).to.be.equal(MemoUser.STATUS.ON);
+                done();
+            })
+            .catch(done);
+        });
+    });
+/*
     describe("purge", function() {
         var dateMinus0 = moment();
         var dateMinus10 = moment().subtract(10, "days");
@@ -474,48 +592,6 @@ describe("unit.memouser", function() {
                     });
                 });
             })
-        });
-    });
-
-    describe("restore", function() {
-        afterEach(function(done) {
-            User.Remove({email: email1}, function() {
-                done();
-            });
-        });
-
-        it("success", function(done) {
-            User.Create({email: email1, password: password}, function(err, savedUser) {
-                expect(err).to.be.null;
-                expect(savedUser).to.not.be.null;
-                expect(savedUser.status).to.equal(User.STATUS.CONFIRM);
-                User.SoftRemove(email1, password, function(err2, savedUser2) {
-                    expect(err2).to.be.null;
-                    expect(savedUser2).to.not.be.null;
-                    expect(savedUser2.status).to.be.equal(User.STATUS.REMOVED);
-                    User.Find({email: email1}, function(err3, users) {
-                        expect(err3).to.be.null;
-                        expect(users).to.not.be.null;
-                        expect(users.length).to.equal(1);
-                        var user = users[0];
-                        expect(user.status).to.be.equal(User.STATUS.REMOVED);
-                        User.Restore(email1, function(err4, savedUser4) {
-                            expect(err4).to.be.null;
-                            expect(savedUser4).to.not.be.null;
-                            expect(savedUser4.status).to.be.equal(User.STATUS.CONFIRM);
-                            done();
-                        });
-                    });
-                });
-            });
-        });
-        it("notfound", function(done) {
-            User.Restore(email1, function(err, savedUser) {
-                expect(err).to.not.be.null;
-                expect(err.code).to.be.equal(User.ERROR.USER_UNKNOW);
-                expect(savedUser).to.be.null;
-                done();
-            });
         });
     });
 
@@ -735,52 +811,6 @@ describe("unit.memouser", function() {
         });
     });
 
-    describe("get", function() {
-        beforeEach(function(done) {
-            User.Create({
-                    email : email1,
-                    password : "a"
-                },
-                function(err, savedUser) {
-                    expect(err).to.be.null;
-                    expect(savedUser).to.not.be.null;
-                    expect(savedUser.email).to.equal(email1);
-                    done();
-                }
-            );
-        });
-
-        afterEach(function(done) {
-            User.Remove({email: email1}, done);
-        });
-
-        it("found", function(done) {
-            User.Get(email1, function(err, user) {
-                expect(err).to.be.null;
-                expect(user).to.not.be.null;
-                expect(user.email).to.equal(email1);
-                done();
-            });
-        });
-
-        it("notfound", function(done) {
-            User.Get(email2, function(err, user) {
-                expect(err).to.not.be.null;
-                expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                done();
-            });
-        });
-
-        it("missingparams", function(done) {
-            User.Get(null, function(err, user) {
-                expect(err).to.not.be.null;
-                expect(err.code).to.equal(User.ERROR.USER_PARAMS);
-                done();
-            });
-        });
-
-    });
-
     describe("find", function() {
         beforeEach(function(done) {
             User.Create({
@@ -863,48 +893,6 @@ describe("unit.memouser", function() {
                 expect(err).to.be.null;
                 expect(users).to.not.be.null;
                 expect(users.length).to.be.at.least(3);
-                done();
-            });
-        });
-    });
-
-    describe("confirm", function() {
-        var userid;
-
-        beforeEach(function(done) {
-            User.Create({
-                    email : email1,
-                    password : password
-                },
-                function(err, savedUser) {
-                    expect(err).to.be.null;
-                    expect(savedUser).to.not.be.null;
-                    expect(savedUser.email).to.equal(email1);
-                    expect(savedUser.status).to.equal(User.STATUS.CONFIRM);
-                    userid = savedUser.id;
-                    done();
-                }
-            );
-        });
-
-        afterEach(function(done) {
-            User.Remove({email: email1}, done);
-        });
-
-        it("missingparams", function(done) {
-            User.Confirm(null, function(err, savedUser) {
-                expect(err).to.not.be.null;
-                expect(err.code).to.equal(User.ERROR.USER_PARAMS);
-                expect(savedUser).to.be.null;
-                done();
-            });
-        });
-
-        it("success", function(done) {
-            User.Confirm(userid, function(err, savedUser) {
-                expect(err).to.be.null;
-                expect(savedUser).to.not.be.null;
-                expect(savedUser.status).to.equal(User.STATUS.OFF);
                 done();
             });
         });

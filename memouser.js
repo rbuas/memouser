@@ -10,15 +10,16 @@ var MemoDB = require("memodb");
 MemoUserDB.extends( MemoDB );
 function MemoUserDB (options) {
     var self = this;
-    self.options = Object.assign(MemoUserDB.DEFAULTOPTIONS, MemoDB.DEFAULTOPTIONS, options);
+    self.options = Object.assign({}, MemoDB.DEFAULTOPTIONS, MemoUserDB.DEFAULTOPTIONS, {
+        schema : self.SCHEMA, 
+        schemadefault : self.SCHEMADEFAULT, 
+        badgekeys : self.BADGEKEYS
+    }, options);
     MemoDB.call(self, self.options);
 }
 
 MemoUserDB.DEFAULTOPTIONS = {
     type : "user",
-    schema : self.SCHEMA,
-    schemadefault : self.SCHEMADEFAULT,
-    badgekeys : self.BADGEKEYS,
     hashsize : 16,
     encryptsalt : 10,
     message : function(userbadge, message) {
@@ -45,15 +46,7 @@ MemoUserDB.ERROR = Object.assign({}, MemoDB.ERROR, {
     WRONG_PASSWORD : "The password not match with registered password",
     NOTLOGGED : "User not logged",
     TOKEN : "User token doesn't match",
-    STATUS : "Not an allowed state to process this operation",
-
-    USER_PARAMS : "Missing required params",
-    USER_DATA : "Missing user data",
-    USER_UNKNOW : "Unknow user",
-    USER_NOTAUTHORIZED : "User not authorized",
-    USER_CONFIRMATION : "Waiting confirmation",
-    USER_BLOCKED : "User blocked",
-    USER_REMOVED : "User removed"
+    STATUS : "Not an allowed state to process this operation"
 });
 
 MemoUserDB.STATUS = {
@@ -111,6 +104,8 @@ MemoUserDB.prototype.SCHEMADEFAULT = function() {
 MemoUserDB.prototype.verifyPassport = function(id, password) {
     var self = this;
     return new Promise(function(resolve, reject) {
+        if(!password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD, id:id});
+
         self.get(id)
         .then(function(user) {
             if(!user || !user.password) return reject({error:MemoUserDB.ERROR.MISSING_PASSWORD});
@@ -183,7 +178,7 @@ MemoUserDB.prototype.signout = function(id) {
         self.get(id)
         .then(function(user) {
             user.status = MemoUserDB.STATUS.OUT;
-            return self.update(verifiedUser);
+            return self.update(user);
         })
         .then(resolve)
         .catch(reject);
@@ -233,8 +228,8 @@ MemoUserDB.prototype.confirm = function(id, token) {
 
             if(user.token != token) return reject({error:MemoUserDB.ERROR.TOKEN});
 
-            verifiedUser.status = MemoUserDB.STATUS.OFF;
-            return self.update(verifiedUser);
+            user.status = MemoUserDB.STATUS.OFF;
+            return self.update(user);
         })
         .then(resolve)
         .catch(reject);
@@ -248,28 +243,29 @@ MemoUserDB.prototype.update = function(user) {
             user.password = null;
             delete user.password;
         }
-        if(user.newpassword) {
-            encryptPassword(self, user.newpassword)
-            .then(function(encryptedPassword) {
-                if(!encryptedPassword) return reject({error:MemoUserDB.ERROR.ENCRYPT});
+        if(!user.newpassword)
+            return MemoDB.prototype.update.call(self, user).then(resolve).catch(reject);
 
-                user.password = encryptedPassword;
-                return MemoDB.prototype.update.call(self, user);
-            })
-            .then(resolve)
-            .catch(reject);
-        }
+        encryptPassword(self, user.newpassword)
+        .then(function(encryptedPassword) {
+            if(!encryptedPassword) return reject({error:MemoUserDB.ERROR.ENCRYPT});
+
+            user.password = encryptedPassword;
+            return MemoDB.prototype.update.call(self, user);
+        })
+        .then(resolve)
+        .catch(reject);
     });
 }
 
-MemoUserDB.prototype.revive = function(id) {
+MemoUserDB.prototype.restore = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
         self.get(id)
         .then(function(user) {
             if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
 
-            if(user.status != MemoUserDB.STATE.OUT) return reject({error:MemoUserDB.ERROR.STATUS, status:user.status});
+            if(user.status != MemoUserDB.STATUS.OUT) return reject({error:MemoUserDB.ERROR.STATUS, status:user.status});
 
             user.status = MemoUserDB.STATUS.CONFIRM;
 
@@ -451,9 +447,9 @@ function assertUser (user, isNewUser) {
 
 function sendMessage (self, user, message) {
     var messageAction = self.options.message;
-    if(!message) return;
+    if(!messageAction || !message) return;
 
     var userbadget = pickUserBadge(self, user);
-    message(userbadget, message);
+    messageAction(userbadget, message);
     return userbadget;
 }
