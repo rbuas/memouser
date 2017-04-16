@@ -278,16 +278,20 @@ MemoUserDB.prototype.restore = function(id) {
     });
 }
 
-MemoUserDB.prototype.addPassport = function(id, path) {
+MemoUserDB.prototype.addPassport = function(id, pathpass) {
     var self = this;
     return new Promise(function(resolve, reject) {
+        if(!pathpass) return reject({error:MemoUserDB.ERROR.MISSING_PARAMS});
+
         self.get(id)
         .then(function(user) {
             if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
 
-            if(!user.passport) user.passport = [];
-            user.passport.push(path);
+            if(typeof(pathpass) == "string") pathpass = [pathpass];
 
+            user.passport = user.passport || [];
+            user.passport = user.passport.concat(pathpass);
+            user.passport = user.passport.unique();
             return self.update(user);
         })
         .then(resolve)
@@ -295,16 +299,19 @@ MemoUserDB.prototype.addPassport = function(id, path) {
     });
 }
 
-MemoUserDB.prototype.remPassport = function(id, path) {
+MemoUserDB.prototype.remPassport = function(id, pathpass) {
     var self = this;
     return new Promise(function(resolve, reject) {
+        if(!pathpass) return reject({error:MemoUserDB.ERROR.MISSING_PARAMS});
+
         self.get(id)
         .then(function(user) {
             if(!user) return reject({error:MemoUserDB.ERROR.NOTFOUND});
 
-            if(!user.passport) user.passport = [];
-            
-            user.passport.removeValue(path);
+            if(typeof(pathpass) == "string") pathpass = [pathpass];
+
+            user.passport = user.passport || [];
+            user.passport = user.passport.removeArray(pathpass);
 
             return self.update(user);
         })
