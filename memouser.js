@@ -5,7 +5,7 @@ var moment = require("moment");
 var crypto = require("crypto");
 
 var jsext = require("jsext");
-var MemoDB = require("../memodb");
+var MemoDB = require("memodb");
 
 MemoUserDB.extends( MemoDB );
 function MemoUserDB (options) {
