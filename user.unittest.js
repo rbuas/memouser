@@ -642,275 +642,125 @@ describe("unit.memouser", function() {
         });
     });
 
-/*
+    describe("find", function() {
+        var dateMinus0 = moment();
+        var dateMinus10 = moment().subtract(10, "days");
+        var dateMinus30 = moment().subtract(30, "days");
+
+        beforeEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {
+                return Promise.all([
+                    memouser.signup({email:"01@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.ON}),
+                    memouser.signup({email:"02@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.ON}),
+                    memouser.signup({email:"03@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.ON}),
+
+                    memouser.signup({email:"04@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.OFF}),
+                    memouser.signup({email:"05@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.OFF}),
+                    memouser.signup({email:"06@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.OFF}),
+
+                    memouser.signup({email:"07@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.OUT}),
+                    memouser.signup({email:"08@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.OUT}),
+                    memouser.signup({email:"09@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.OUT}),
+
+                    memouser.signup({email:"10@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.CONFIRM}),
+                    memouser.signup({email:"11@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.CONFIRM}),
+                    memouser.signup({email:"12@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.CONFIRM}),
+
+                    memouser.signup({email:"13@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.REVIVE}),
+                    memouser.signup({email:"14@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.REVIVE}),
+                    memouser.signup({email:"15@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.REVIVE}),
+
+                    memouser.signup({email:"16@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.BLOCK}),
+                    memouser.signup({email:"17@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.BLOCK}),
+                    memouser.signup({email:"18@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.BLOCK})
+                ]);
+            })
+            .then(function() { done(); })
+            .catch(done); 
+        });
+
+        afterEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {done();})
+            .catch(done); 
+        });
+
+        it("must get an array of 3 users", function(done) {
+            memouser.find({status:MemoUser.STATUS.REVIVE})
+            .then(function(userlist) {
+                expect(userlist).to.be.ok;
+                expect(userlist.length).to.be.equal(3);
+                done();
+            })
+            .catch(done);
+        });
+
+        it("must get an error with 6 users", function(done) {
+            memouser.find({since:function(val) {return moment(val) >= dateMinus10;}})
+            .then(function(userlist) {
+                expect(userlist).to.be.ok;
+                expect(userlist.length).to.be.equal(12);
+                done();
+            })
+            .catch(done);
+        });
+    });
+
     describe("purge", function() {
         var dateMinus0 = moment();
         var dateMinus10 = moment().subtract(10, "days");
         var dateMinus30 = moment().subtract(30, "days");
-        beforeEach(function(done) {
-            User.Create({
-                    email : email1,
-                    password : "a",
-                    forcestatus : User.STATUS.ANONYMOUS,
-                    since : dateMinus10
-                },
-                function(err, savedUser) {
-                    expect(err).to.be.null;
-                    expect(savedUser).to.not.be.null;
-                    expect(savedUser.status).to.equal(User.STATUS.ANONYMOUS);
-                    expect(savedUser.email).to.equal(email1);
-                    expect(dateMinus10.isSame(savedUser.since)).to.equal(true);
-                    User.Create({
-                        email : email2,
-                        password : "a",
-                        forcestatus : User.STATUS.ANONYMOUS,
-                        since : dateMinus30
-                    },
-                    function(err2, savedUser2) {
-                            expect(err2).to.be.null;
-                            expect(savedUser2).to.not.be.null;
-                            expect(savedUser2.email).to.equal(email2);
-                            expect(savedUser2.status).to.equal(User.STATUS.ANONYMOUS);
-                            expect(dateMinus30.isSame(savedUser2.since)).to.equal(true);
-                            User.Create({
-                                    email : email3,
-                                    password : "a",
-                                    forcestatus : User.STATUS.ANONYMOUS,
-                                },
-                                function(err3, savedUser3) {
-                                    expect(err3).to.be.null;
-                                    expect(savedUser3).to.not.be.null;
-                                    expect(savedUser3.email).to.equal(email3);
-                                    expect(savedUser3.status).to.equal(User.STATUS.ANONYMOUS);
-                                    User.Create({
-                                            email : email4,
-                                            password : "a",
-                                            forcestatus : User.STATUS.CONFIRM,
-                                            since : dateMinus10
-                                        },
-                                        function(err4, savedUser4) {
-                                            expect(err4).to.be.null;
-                                            expect(savedUser4).to.not.be.null;
-                                            expect(savedUser4.email).to.equal(email4);
-                                            expect(savedUser4.status).to.equal(User.STATUS.CONFIRM);
-                                            expect(dateMinus10.isSame(savedUser.since)).to.equal(true);
-                                            done();
-                                        }
-                                    );
-                                }
-                            );
-                        }
-                    );
-                }
-            );
-        });
 
-        afterEach(function(done) {
-            User.Remove({email: email1}, function() {
-                User.Remove({email: email2}, function() {
-                    User.Remove({email: email3}, function() {
-                        User.Remove({email: email4}, function() {
-                            done();
-                        });
-                    });
-                });
-            });
-        });
+        beforeEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {
+                return Promise.all([
+                    memouser.signup({email:"01@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.ON}),
+                    memouser.signup({email:"02@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.ON}),
+                    memouser.signup({email:"03@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.ON}),
 
-        it("days-0-anonymous", function(done) {
-            User.Purge(0, User.STATUS.ANONYMOUS, function(err) {
-                expect(err).to.be.null;
-                User.Get(email1, function(err, user) {
-                    expect(err).to.not.be.null;
-                    expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                    expect(user).to.be.null;
-                    User.Get(email2, function(err, user) {
-                        expect(err).to.not.be.null;
-                        expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                        expect(user).to.be.null;
-                        User.Get(email3, function(err, user) {
-                            expect(err).to.not.be.null;
-                            expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                            expect(user).to.be.null;
-                            User.Get(email4, function(err, user4) {
-                                expect(err).to.be.null;
-                                expect(user4).to.not.be.null;
-                                expect(user4.email).to.equal(email4);
-                                done();
-                            });
-                        });
-                    });
-                });
+                    memouser.signup({email:"04@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.OFF}),
+                    memouser.signup({email:"05@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.OFF}),
+                    memouser.signup({email:"06@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.OFF}),
+
+                    memouser.signup({email:"07@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.OUT}),
+                    memouser.signup({email:"08@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.OUT}),
+                    memouser.signup({email:"09@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.OUT}),
+
+                    memouser.signup({email:"10@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.CONFIRM}),
+                    memouser.signup({email:"11@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.CONFIRM}),
+                    memouser.signup({email:"12@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.CONFIRM}),
+
+                    memouser.signup({email:"13@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.REVIVE}),
+                    memouser.signup({email:"14@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.REVIVE}),
+                    memouser.signup({email:"15@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.REVIVE}),
+
+                    memouser.signup({email:"16@test.com",password:"123456",since:dateMinus0}, {status:MemoUser.STATUS.BLOCK}),
+                    memouser.signup({email:"17@test.com",password:"123456",since:dateMinus10}, {status:MemoUser.STATUS.BLOCK}),
+                    memouser.signup({email:"18@test.com",password:"123456",since:dateMinus30}, {status:MemoUser.STATUS.BLOCK})
+                ]);
             })
+            .then(function() { done(); })
+            .catch(done); 
         });
 
-        it("days-10-anonymous", function(done) {
-            User.Purge(10, User.STATUS.ANONYMOUS, function(err) {
-                expect(err).to.be.null;
-                User.Get(email1, function(err, user) {
-                    expect(err).to.not.be.null;
-                    expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                    expect(user).to.be.null;
-                    User.Get(email2, function(err, user) {
-                        expect(err).to.not.be.null;
-                        expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                        expect(user).to.be.null;
-                        User.Get(email3, function(err, user3) {
-                            expect(err).to.be.null;
-                            expect(user3).to.not.be.null;
-                            expect(user3.email).to.equal(email3);
-                            User.Get(email4, function(err, user4) {
-                                expect(err).to.be.null;
-                                expect(user4).to.not.be.null;
-                                expect(user4.email).to.equal(email4);
-                                done();
-                            });
-                        });
-                    });
-                });
-            })
+        afterEach(function(done) { 
+            memouser.removeAll()
+            .then(function() {done();})
+            .catch(done); 
         });
 
-        it("days-10-confirm", function(done) {
-            User.Purge(10, User.STATUS.CONFIRM, function(err) {
-                expect(err).to.be.null;
-                User.Get(email1, function(err, user1) {
-                    expect(err).to.be.null;
-                    expect(user1).to.not.be.null;
-                    expect(user1.email).to.equal(email1);
-                    User.Get(email2, function(err, user2) {
-                        expect(err).to.be.null;
-                        expect(user2).to.not.be.null;
-                        expect(user2.email).to.equal(email2);
-                        User.Get(email3, function(err, user3) {
-                            expect(err).to.be.null;
-                            expect(user3).to.not.be.null;
-                            expect(user3.email).to.equal(email3);
-                            User.Get(email4, function(err, user4) {
-                                expect(err).to.not.be.null;
-                                expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                                expect(user4).to.be.null;
-                                done();
-                            });
-                        });
-                    });
-                });
+        it("must purge until last 10 days", function(done) {
+            memouser.purge(10)
+            .then(function(purgelist) {
+                expect(purgelist).to.be.ok;
+                expect(purgelist.length).to.be.equal(2);
+                expect(purgelist[0].id).to.be.equal("11@test.com");
+                expect(purgelist[1].id).to.be.equal("12@test.com");
+                done();
             })
-        });
-
-        it("days-30-anonymous", function(done) {
-            User.Purge(30, User.STATUS.ANONYMOUS, function(err) {
-                expect(err).to.be.null;
-                User.Get(email1, function(err, user1) {
-                    expect(err).to.be.null;
-                    expect(user1).to.not.be.null;
-                    expect(user1.email).to.equal(email1);
-                    User.Get(email2, function(err, user2) {
-                        expect(err).to.not.be.null;
-                        expect(err.code).to.equal(User.ERROR.USER_NOTFOUND);
-                        expect(user2).to.be.null;
-                        User.Get(email3, function(err, user3) {
-                            expect(err).to.be.null;
-                            expect(user3).to.not.be.null;
-                            expect(user3.email).to.equal(email3);
-                            User.Get(email4, function(err, user4) {
-                                expect(err).to.be.null;
-                                expect(user4).to.not.be.null;
-                                expect(user4.email).to.equal(email4);
-                                done();
-                            });
-                        });
-                    });
-                });
-            })
+            .catch(done);
         });
     });
-
-    describe("find", function() {
-        beforeEach(function(done) {
-            User.Create({
-                    email : email1,
-                    password : "a",
-                    forcestatus : User.STATUS.ANONYMOUS
-                },
-                function(err, savedUser) {
-                    expect(err).to.be.null;
-                    expect(savedUser).to.not.be.null;
-                    expect(savedUser.status).to.equal(User.STATUS.ANONYMOUS);
-                    expect(savedUser.email).to.equal(email1);
-                    User.Create({
-                        email : email2,
-                        password : "a",
-                        forcestatus : User.STATUS.ANONYMOUS
-                    },
-                    function(err2, savedUser2) {
-                            expect(err2).to.be.null;
-                            expect(savedUser2).to.not.be.null;
-                            expect(savedUser2.email).to.equal(email2);
-                            expect(savedUser2.status).to.equal(User.STATUS.ANONYMOUS);
-                            User.Create({
-                                    email : email3,
-                                    password : "a",
-                                    forcestatus : User.STATUS.CONFIRM
-                                },
-                                function(err3, savedUser3) {
-                                    expect(err3).to.be.null;
-                                    expect(savedUser3).to.not.be.null;
-                                    expect(savedUser3.email).to.equal(email3);
-                                    expect(savedUser3.status).to.equal(User.STATUS.CONFIRM);
-                                    done();
-                                }
-                            );
-                        }
-                    );
-                }
-            );
-        });
-
-        afterEach(function(done) {
-            User.Remove({email: email1}, function() {
-                User.Remove({email: email2}, function() {
-                    User.Remove({email: email3}, done);
-                });
-            });
-        });
-
-        it("found", function(done) {
-            User.Find({email:email1}, function(err, users) {
-                expect(err).to.be.null;
-                expect(users).to.not.be.null;
-                expect(users.length).to.equal(1);
-                expect(users[0].email).to.equal(email1);
-                done();
-            });
-        });
-
-        it("notfound", function(done) {
-            User.Find({email:email4}, function(err, users) {
-                expect(err).to.be.null;
-                expect(users).to.not.be.null;
-                expect(users.length).to.equal(0);
-                done();
-            });
-        });
-
-        it("multiples", function(done) {
-            User.Find({status : User.STATUS.ANONYMOUS}, function(err, users) {
-                expect(err).to.be.null;
-                expect(users).to.not.be.null;
-                expect(users.length).to.be.at.least(2);
-                done();
-            });
-        });
-
-        it("all", function(done) {
-            User.Find({}, function(err, users) {
-                expect(err).to.be.null;
-                expect(users).to.not.be.null;
-                expect(users.length).to.be.at.least(3);
-                done();
-            });
-        });
-    });
-    */
 });

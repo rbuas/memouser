@@ -5,7 +5,7 @@ var moment = require("moment");
 var crypto = require("crypto");
 
 var jsext = require("jsext");
-var MemoDB = require("memodb");
+var MemoDB = require("../memodb");
 
 MemoUserDB.extends( MemoDB );
 function MemoUserDB (options) {
@@ -142,7 +142,7 @@ MemoUserDB.prototype.badget = function(id) {
     });
 }
 
-MemoUserDB.prototype.signup = function(user) {
+MemoUserDB.prototype.signup = function(user, forceparams) {
     var self = this;
     return new Promise(function(resolve, reject) {
         var badge = pickUserBadge(self, user);
@@ -153,7 +153,7 @@ MemoUserDB.prototype.signup = function(user) {
         user.id = user.id || user.email;
         user.email = user.email || user.id;
         user.birthday = moment.utc(user.birthday, "YYYYMMDD");
-        user.status = MemoUserDB.STATUS.CONFIRM;
+        user.status = forceparams && forceparams.status || MemoUserDB.STATUS.CONFIRM;
         encryptPassword(self, user.password)
         .then(function(encryptedPassword) {
             if(!encryptedPassword) return reject({error:MemoUserDB.ERROR.ENCRYPT});
@@ -362,29 +362,12 @@ MemoUserDB.prototype.purge = function(days) {
     var self = this;
     var targetSince = moment().subtract(days, "days");
     return new Promise(function(resolve, reject) {
-        self.find({status:MemoUserDB.STATUS.CONFIRM})
+        self.find({status:MemoUserDB.STATUS.CONFIRM, since : function(val) { return moment(val) < targetSince; }})
         .then(function(list) {
-            return list.reduce(function(resp, user) {
-                user = pickUserBadge(self, user);
-                if(user.since < targetSince) {
-                    resp.purge.push(user);
-                } else {
-                    resp.warning.push(user);
-                }
-            }, {purge:[], warning:[]});
-        })
-        .then(function(groups) {
-            if(!groups) return;
-
-            var tasks = groups.purge.map(function(user) {
+            var tasks = list.map(function(user) {
                 sendMessage(self, user, MemoUserDB.MESSAGE.CONFIRM_PURGED);
                 return self.remove(user.id);
             });
-
-            groups.warning.forEach(function(user) {
-                sendMessage(self, user, MemoUserDB.MESSAGE.CONFIRM_FINISHING);
-            });
-
             return Promise.all(tasks);
         })
         .then(resolve)
