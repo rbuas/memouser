@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "bcrypt": "^1.0.2",
-    "jsext": "^1.0.0",
-    "memodb": "^0.0.8"
+    "jsext": "^1.0.5",
+    "memodb": "^0.0.12"
   },
   "devDependencies": {
     "chai": "^3.5.0",
