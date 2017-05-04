@@ -10,7 +10,7 @@
     "data"
   ],
   "license": "MIT",
-  "main": "./memouser",
+  "main": "./index",
   "repository": {
     "type": "git",
     "url": "http://github.com/rbuas/memouser.git"
