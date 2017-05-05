@@ -130,12 +130,17 @@ MemoUserDB.prototype.message = function(id, message) {
     });
 }
 
+MemoUserDB.prototype.pickUserBadge = function (user) {
+    var self = this;
+    return user && user.pick(self.BADGEKEYS);
+}
+
 MemoUserDB.prototype.badget = function(id) {
     var self = this;
     return new Promise(function(resolve, reject) {
         self.get(id)
         .then(function(user) {
-            return pickUserBadge(self, user);
+            return self.pickUserBadge(user);
         })
         .then(resolve)
         .catch(reject);
@@ -145,7 +150,7 @@ MemoUserDB.prototype.badget = function(id) {
 MemoUserDB.prototype.signup = function(user, forceparams) {
     var self = this;
     return new Promise(function(resolve, reject) {
-        var badge = pickUserBadge(self, user);
+        var badge = self.pickUserBadge(user);
         var isNewUser = true;
         var error = assertUser(user, isNewUser);
         if(error) return reject({error:error, user:badge});
@@ -408,10 +413,6 @@ function verifyPassword (self, user, candidate) {
     });
 }
 
-function pickUserBadge (self, user) {
-    return user && user.pick(self.BADGEKEYS);
-}
-
 function verifyEnun (value, options) {
     if(!value || !options) return false;
 
@@ -439,7 +440,7 @@ function sendMessage (self, user, message) {
     var messageAction = self.options.message;
     if(!messageAction || !message) return;
 
-    var userbadget = pickUserBadge(self, user);
+    var userbadget = self.pickUserBadge(user);
     messageAction(userbadget, message);
     return userbadget;
 }

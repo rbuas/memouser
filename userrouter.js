@@ -21,8 +21,43 @@ UserRouter.prototype.signup = function() {
 
         //call api
         self.udb.signup(user)
-        .then(function(newuser) {
-            res.json({status:"SUCCESS", user:newuser});
+        .then(function(newUserBadge) {
+            res.json({status:"SUCCESS", user:newUserBadge});
+        })
+        .catch(function(err) {
+            res.json({status:"ERROR", error:err && err.error});
+        });
+    };
+}
+
+UserRouter.prototype.signout = function() {
+    var self = this;
+    return function (req, res) {
+        //prepare params
+        var userid = req.query.userid;
+
+        //call api
+        self.udb.signout(userid)
+        .then(function(user) {
+            res.json({status:"SUCCESS", info:self.udb.pickUserBadge(user)});
+        })
+        .catch(function(err) {
+            res.json({status:"ERROR", error:err && err.error});
+        });
+    };
+}
+
+UserRouter.prototype.login = function() {
+    var self = this;
+    return function (req, res) {
+        //prepare params
+        var userid = req.query.userid;
+        var userpass = req.query.password;
+
+        //call api
+        self.udb.login(userid, userpass)
+        .then(function(user) {
+            res.json({status:"SUCCESS", info:self.udb.pickUserBadge(user)});
         })
         .catch(function(err) {
             res.json({status:"ERROR", error:err && err.error});
