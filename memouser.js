@@ -17,7 +17,7 @@ function MemoUserDB (options) {
         badgekeys : self.BADGEKEYS
     }, options);
     MemoDB.call(self, self.options);
-    self.router = UserRouter(self);
+    self.router = new UserRouter(self);
 }
 
 MemoUserDB.DEFAULTOPTIONS = {
