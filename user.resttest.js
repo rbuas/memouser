@@ -201,7 +201,7 @@ describe("memouser.rest", function() {
                 expect(response.data.status).to.be.equal("SUCCESS");
                 expect(response.data.info).to.be.ok;
                 expect(response.data.info.email).to.be.equal("test1@test.com");
-                expect(response.data.info.status).to.be.equal("T");
+                expect(response.data.info.status).to.be.equal(MemoUserDB.STATUS.OUT);
                 done();
             })
             .catch(function(err) { done(err); });
@@ -249,9 +249,6 @@ describe("memouser.rest", function() {
 
         it("must to login user", function(done) {
             return urt.login("test1@test.com", "123456")
-            .then(function(response) {
-                return urt.signout("test1@test.com")
-            })
             .then(function(response) { 
                 expect(response).to.be.ok;
                 expect(response.info).to.be.ok;
@@ -261,10 +258,56 @@ describe("memouser.rest", function() {
                 expect(response.data.status).to.be.equal("SUCCESS");
                 expect(response.data.info).to.be.ok;
                 expect(response.data.info.email).to.be.equal("test1@test.com");
-                expect(response.data.info.status).to.be.equal("T");
+                expect(response.data.info.status).to.be.equal(MemoUserDB.STATUS.ON);
                 done();
             })
             .catch(function(err) { done(err); });
         });
+
+        it("must get an error when login with a wrong password", function(done) {
+            return urt.login("test1@test.com", "qsdq")
+            .then(function(response) { 
+                expect(response).to.be.ok;
+                expect(response.info).to.be.ok;
+                expect(response.info.duration).to.be.lessThan(500);
+                expect(response.info.statusCode).to.be.equal(200);
+                expect(response.data).to.be.ok;
+                expect(response.data.status).to.be.equal("ERROR");
+                expect(response.data.error).to.be.equal(MemoUserDB.ERROR.WRONG_PASSWORD);
+                done();
+            })
+            .catch(function(err) { done(err); });
+        });
+
+        it("must get an error when login without a password", function(done) {
+            return urt.login("test1@test.com")
+            .then(function(response) { 
+                expect(response).to.be.ok;
+                expect(response.info).to.be.ok;
+                expect(response.info.duration).to.be.lessThan(500);
+                expect(response.info.statusCode).to.be.equal(200);
+                expect(response.data).to.be.ok;
+                expect(response.data.status).to.be.equal("ERROR");
+                expect(response.data.error).to.be.equal(MemoUserDB.ERROR.MISSING_PASSWORD);
+                done();
+            })
+            .catch(function(err) { done(err); });
+        });
+
+        it("must get an error when login a non existent user", function(done) {
+            return urt.login("test2@test.com", "qsdq")
+            .then(function(response) { 
+                expect(response).to.be.ok;
+                expect(response.info).to.be.ok;
+                expect(response.info.duration).to.be.lessThan(500);
+                expect(response.info.statusCode).to.be.equal(200);
+                expect(response.data).to.be.ok;
+                expect(response.data.status).to.be.equal("ERROR");
+                expect(response.data.error).to.be.equal(MemoUserDB.ERROR.NOTFOUND);
+                done();
+            })
+            .catch(function(err) { done(err); });
+        });
+
     });
 });
