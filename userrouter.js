@@ -19,6 +19,9 @@ UserRouter.prototype.signup = function() {
         //prepare params
         var user = req.body && req.body["user"];
 
+        //keep userid
+        req.session.userid = user.email;
+
         //call api
         self.udb.signup(user)
         .then(function(newUser) {
@@ -54,10 +57,16 @@ UserRouter.prototype.login = function() {
         var userid = req.query.userid;
         var userpass = req.query.password;
 
+        //keep user id
+        req.session.userid = userid;
+        //reset old user badge
+        req.session.userbadge = null;
+
         //call api
         self.udb.login(userid, userpass)
         .then(function(user) {
-            res.json({status:"SUCCESS", info:self.udb.pickUserBadge(user)});
+            req.session.userbadge = self.udb.pickUserBadge(user);
+            res.json({status:"SUCCESS", info:req.session.userbadge});
         })
         .catch(function(err) {
             res.json({status:"ERROR", error:err && err.error});
@@ -70,6 +79,9 @@ UserRouter.prototype.logout = function() {
     return function (req, res) {
         //prepare params
         var userid = req.query.userid;
+
+        //reset old user badge
+        req.session.userbadge = null;
 
         //call api
         self.udb.logout(userid)
