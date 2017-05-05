@@ -5,7 +5,7 @@ var expect = require("chai").expect;
 var bodyparser = require("body-parser");
 var express = require("express");
 var MemoCache = require("memocache");
-var RestTest = require("../webdrone").RestTest;
+var RestTest = require("webdrone").RestTest;
 
 var MemoUserDB = require("./memouser");
 var UserRouter = require("./userrouter");
@@ -34,20 +34,10 @@ function MemoUserRestTest (options) {
         message: false //silence is golden
     });
     self.userRouter = new UserRouter(self.userdb);
-    //self.router.param("user", self.userRouter.memoParam());
+    self.router.param("user", self.userRouter.memoParam());
     self.router.post("/signup", self.userRouter.signup());
     self.router.get("/signout", self.userRouter.signout());
     self.router.get("/login", self.userRouter.login());
-    // self.router.get("/keys", self.userRouter.keys());
-    // self.router.get("/count", self.userRouter.count());
-    // self.router.get("/get/:user/:pick?", self.userRouter.get());
-    // self.router.get("/getlist/:memolist/:pick?", self.userRouter.getList());
-    // self.router.get("/random/:count?/:pick?", self.userRouter.random());
-    // self.router.post("/create", self.userRouter.create());
-    // self.router.get("/clone/:user/:clone", self.userRouter.clone());
-    // self.router.post("/update", self.userRouter.update());
-    // self.router.get("/remove/:user", self.userRouter.remove());
-    // self.router.post("/removelist", self.userRouter.removeList());
     self.app.use("/", self.router);
     self.server = self.app.listen(self.options.port || 3000, function(){
         console.log("Test server live at port " + (self.options.port || 3000));

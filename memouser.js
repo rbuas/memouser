@@ -365,7 +365,7 @@ MemoUserDB.prototype.newPassword = function(id, newpassword) {
 
 MemoUserDB.prototype.purge = function(days) {
     var self = this;
-    var targetSince = moment().subtract(days, "days");
+    var targetSince = moment().subtract(days || 30, "days");
     return new Promise(function(resolve, reject) {
         self.find({status:MemoUserDB.STATUS.CONFIRM, since : function(val) { return moment(val) < targetSince; }})
         .then(function(list) {
