@@ -2,9 +2,10 @@ global.ROOT_DIR = process.cwd() || __dirname;
 
 var jsext = require("jsext");
 var expect = require("chai").expect;
+var bodyparser = require("body-parser");
 var express = require("express");
 var MemoCache = require("memocache");
-var RestTest = require("webdrone").RestTest;
+var RestTest = require("../webdrone").RestTest;
 
 var MemoUserDB = require("./memouser");
 var UserRouter = require("./userrouter");
@@ -17,6 +18,9 @@ function MemoUserRestTest (options) {
     var self = this;
     RestTest.call(this, options);
     self.app = express();
+    self.app.use(bodyparser.json());
+    self.app.use(bodyparser.json({ type: 'application/vnd.api+json' })); 
+    self.app.use(bodyparser.urlencoded({extended:true}));
     self.router = express.Router();
     self.mcache = new MemoCache({
         maxSize:5000000,
@@ -109,23 +113,8 @@ describe("memouser.rest", function() {
             .catch(function(err) { done(err); });
         });
 
-        it.only("must get an error because there is no user identification", function(done) {
-            return urt.signup({email:"test@test.com", password:"123456"})
-            .then(function(response) { 
-                expect(response).to.be.ok;
-                expect(response.info).to.be.ok;
-                expect(response.info.duration).to.be.lessThan(500);
-                expect(response.info.statusCode).to.be.equal(200);
-                expect(response.data).to.be.ok;
-                expect(response.data.status).to.be.equal("ERROR");
-                expect(response.data.error).to.be.equal(MemoUserDB.ERROR.MISSING_ID);
-                done();
-            })
-            .catch(function(err) { done(err); });
-        });
-
         it("must get an error because there is no user identification", function(done) {
-            return urt.signup({email:"test@test.com", password:"123456"})
+            return urt.signup({password:"123456"})
             .then(function(response) { 
                 expect(response).to.be.ok;
                 expect(response.info).to.be.ok;
@@ -139,25 +128,47 @@ describe("memouser.rest", function() {
             .catch(function(err) { done(err); });
         });
 
-        it("must return the registered memo keys", function(done) {
-            return urt.keys()
-            .then(
-                function(response) {
-                    expect(response).to.be.ok;
-                    expect(response.info).to.be.ok;
-                    expect(response.info.duration).to.be.lessThan(500);
-                    expect(response.info.statusCode).to.be.equal(200);
-                    expect(response.data).to.be.ok;
-                    expect(response.data.status).to.be.equal("SUCCESS");
-                    expect(response.data.keys).to.be.ok;
-                    expect(response.data.keys.length).to.be.equal(3);
-                    done();
-                },
-                function(error) {
-                    done(error);
-                }
-            )
+        it("must to well signup a new user", function(done) {
+            return urt.signup({email:"test@test.com", password:"123456"})
+            .then(function(response) { 
+                expect(response).to.be.ok;
+                expect(response.info).to.be.ok;
+                expect(response.info.duration).to.be.lessThan(500);
+                expect(response.info.statusCode).to.be.equal(200);
+                expect(response.data).to.be.ok;
+                expect(response.data.status).to.be.equal("SUCCESS");
+                expect(response.data.user).to.be.ok;
+                expect(response.data.user.email).to.be.equal("test@test.com");
+                done();
+            })
             .catch(function(err) { done(err); });
         });
+
+        it("must get a duplicate error", function(done) {
+            return urt.signup({email:"test@test.com", password:"123456"})
+            .then(function(response) {
+                expect(response).to.be.ok;
+                expect(response.info).to.be.ok;
+                expect(response.info.duration).to.be.lessThan(500);
+                expect(response.info.statusCode).to.be.equal(200);
+                expect(response.data).to.be.ok;
+                expect(response.data.status).to.be.equal("SUCCESS");
+                expect(response.data.user).to.be.ok;
+                expect(response.data.user.email).to.be.equal("test@test.com");
+                return urt.signup({email:"test@test.com", password:"123456"});
+            })
+            .then(function(response) {
+                expect(response).to.be.ok;
+                expect(response.info).to.be.ok;
+                expect(response.info.duration).to.be.lessThan(500);
+                expect(response.info.statusCode).to.be.equal(200);
+                expect(response.data).to.be.ok;
+                expect(response.data.status).to.be.equal("ERROR");
+                expect(response.data.error).to.be.equal(MemoUserDB.ERROR.DUPLICATE);
+                done();
+            })
+            .catch(function(err) { done(err); });
+        });
+
     });
 });

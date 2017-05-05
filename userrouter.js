@@ -17,7 +17,7 @@ UserRouter.prototype.signup = function() {
     var self = this;
     return function (req, res) {
         //prepare params
-        var user = req.body["user"];
+        var user = req.body && req.body["user"];
 
         //call api
         self.udb.signup(user)
