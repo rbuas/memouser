@@ -348,7 +348,7 @@ MemoUserDB.prototype.resetPassword = function(id) {
     });
 }
 
-MemoUserDB.prototype.newPassword = function(id, newpassword) {
+MemoUserDB.prototype.newPassword = function(id, newpassword, token) {
     var self = this;
     return new Promise(function(resolve, reject) {
         self.get(id)

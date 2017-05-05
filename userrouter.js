@@ -195,6 +195,7 @@ UserRouter.prototype.newPassword = function() {
         //prepare params
         var userid = req.body && req.body.userid;
         var password = req.body && req.body.password;
+        var token = req.body && req.body.token;
         
         //call api
         self.udb.newPassword(userid, password)
