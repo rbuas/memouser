@@ -6,6 +6,7 @@ var crypto = require("crypto");
 
 var jsext = require("jsext");
 var MemoDB = require("memodb");
+var UserRouter = require("./userrouter");
 
 MemoUserDB.extends( MemoDB );
 function MemoUserDB (options) {
@@ -16,6 +17,7 @@ function MemoUserDB (options) {
         badgekeys : self.BADGEKEYS
     }, options);
     MemoDB.call(self, self.options);
+    self.router = UserRouter(self);
 }
 
 MemoUserDB.DEFAULTOPTIONS = {
